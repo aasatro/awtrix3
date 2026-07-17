@@ -15,7 +15,29 @@ irrelevant instead of visible.
 
 | Where | What | Issue |
 |---|---|---|
-| — | none yet; this branch only adds documentation | aasatro/Kairo#54 |
+| `README.md`, `KAIRO.md` | fork notice and this file | aasatro/Kairo#54 |
+| `src/Apps.cpp` | `formatTimer()` + two cases in `replacePlaceholders()`: `{{UP:<epoch>}}` counts up from an instant, `{{DOWN:<epoch>}}` counts down to one | aasatro/Kairo#55 |
+
+### The timer placeholder
+
+`replacePlaceholders()` already ran on every render pass, resolving `{{topic}}` to its last
+MQTT value. Two extra cases make it count without anyone speaking to it:
+
+```
+mosquitto_pub -h 192.168.178.70 -t 'awtrix/custom/test' \
+  -m '{"text":"{{UP:1752791234}}","noScroll":true}'
+```
+
+`UP` counts up from that Unix epoch, `DOWN` counts down to it and stops at `00:00` rather
+than going negative. The format mirrors `hms()` in Kairo's
+[kairo/adapters/awtrix.py](https://github.com/aasatro/Kairo/blob/main/kairo/adapters/awtrix.py)
+— `MM:SS`, and `H:MM:SS` from an hour — because the web UI and the clock must not show the
+same second in two different shapes.
+
+Any other placeholder still goes to `MQTTManager.getValueForTopic()` untouched, so no
+existing setup notices this firmware. The time source is `time(nullptr)`: `ServerManager`
+calls `configTzTime()`, so the system clock is real UTC epoch, and the difference of two
+epochs carries no timezone — nothing to convert.
 
 Upstream: [Blueforcer/awtrix3](https://github.com/Blueforcer/awtrix3), forked at `723e8c7`,
 `VERSION = "0.98"` — the same version the clock ships with.

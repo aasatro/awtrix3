@@ -413,6 +413,26 @@ void BatApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, i
 }
 #endif
 
+// Mirrors hms() in Kairo's kairo/adapters/awtrix.py — the same rule on both sides, or the
+// web and the clock would show the same second in two different shapes.
+String formatTimer(long seconds)
+{
+    if (seconds < 0)
+    {
+        seconds = 0; // a countdown that ran out reads 00:00, never -00:01
+    }
+    char buffer[16];
+    if (seconds < 3600)
+    {
+        snprintf(buffer, sizeof(buffer), "%02ld:%02ld", seconds / 60, seconds % 60);
+    }
+    else
+    {
+        snprintf(buffer, sizeof(buffer), "%ld:%02ld:%02ld", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
+    }
+    return String(buffer);
+}
+
 String replacePlaceholders(String text)
 {
     int start = 0;
@@ -424,8 +444,25 @@ String replacePlaceholders(String text)
             break;
         }
         String placeholder = text.substring(start + 2, end);
-        String topic = placeholder;
-        text.replace("{{" + placeholder + "}}", MQTTManager.getValueForTopic(topic));
+        String value;
+        // This runs on every render pass, so a timer placeholder counts by itself: the
+        // sender publishes an epoch once and never has to speak again. Everything else
+        // still resolves to its MQTT topic, unchanged — no existing setup notices this.
+        // time(nullptr) is UTC epoch (ServerManager calls configTzTime), and a difference
+        // of two epochs carries no timezone, so no conversion belongs here.
+        if (placeholder.startsWith("UP:"))
+        {
+            value = formatTimer(time(nullptr) - atol(placeholder.substring(3).c_str()));
+        }
+        else if (placeholder.startsWith("DOWN:"))
+        {
+            value = formatTimer(atol(placeholder.substring(5).c_str()) - time(nullptr));
+        }
+        else
+        {
+            value = MQTTManager.getValueForTopic(placeholder);
+        }
+        text.replace("{{" + placeholder + "}}", value);
         start = end + 2;
     }
     return text;
