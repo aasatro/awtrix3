@@ -7,6 +7,12 @@
   "MD041": false
 } -->
  
+> **This is a modified fork.** It is not upstream AWTRIX3 and is not supported by the
+> AWTRIX community. It exists to let [Kairo](https://github.com/aasatro/Kairo) run its timer
+> on the clock instead of streaming a frame per second over a lossy Wi-Fi link.
+> Every change against upstream, the build, the OTA flash and the way back to the official
+> 0.98 are documented in **[KAIRO.md](KAIRO.md)**.
+
 <div align="center">
   
 ![Alt text](/cover.png?raw=true "logo")
